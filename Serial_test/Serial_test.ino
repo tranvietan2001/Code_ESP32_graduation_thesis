@@ -52,6 +52,7 @@ const char *pin = "1234";
 String device_name = "Robot_ESP";
 BluetoothSerial SerialBT;
 
+String data_Uart_Rec;
 void setup() {
   Serial.begin(9600);
   Serial.println("Serial CH340");
@@ -73,18 +74,33 @@ void loop() {
   //  Serial.println("------------------");
   //  delay(100);
 
-//  if (SerialBT.available()) {
-//    char val = SerialBT.read();
-//    Serial.println(val);
-//
-//    Serial2.println(val); 
-//  }
-//        Serial2.println("ESP32");
-//        Serial.println("Truyen UART\n-------------------------");
-        if (Serial2.available() > 0) {
-          String s = Serial2.readStringUntil('\r');
-          Serial.print("Rec: ");
-          Serial.println(s);
-  
-        }
+  //  if (SerialBT.available()) {
+  //    char val = SerialBT.read();
+  //    Serial.println(val);
+  //
+  //    Serial2.println(val);
+  //  }
+  //        Serial2.println("ESP32");
+  //        Serial.println("Truyen UART\n-------------------------");
+  if (Serial2.available() > 0) {
+    data_Uart_Rec = Serial2.readStringUntil('\b');
+    Serial.print("Rec: ");
+    //          Serial.println(data_Uart_Rec);
+    if (data_Uart_Rec == "0")
+      Serial.println(F("STOP"));
+    else if (data_Uart_Rec == "1")
+      Serial.println(F("FORWARD"));
+    else if (data_Uart_Rec == "2")
+      Serial.println(F("RIGHT"));
+    else if (data_Uart_Rec == "3")
+      Serial.println(F("LEFT"));
+    else if (data_Uart_Rec == "4")
+      Serial.println(F("FORWARD-LEFT"));
+    else if (data_Uart_Rec == "5")
+      Serial.println(F("FORWARD-RIGHT"));
+    else if (data_Uart_Rec == "6")
+      Serial.println(F("NO DETECT OBJ"));
+    else Serial.println(F("STOP"));
+  }
+  Serial2.println("ANNNNNNNNNNNNNNNNNNNNNN");
 }

@@ -1,77 +1,112 @@
-#include "config.h"
+#include "BluetoothSerial.h"
+#include "DFRobotDFPlayerMini.h"
+DFRobotDFPlayerMini player;
 
-void rotate(uint8_t in1, uint8_t in2, uint8_t speed) {
-  analogWrite(in1, speed);
-  digitalWrite(in2, LOW);
-}
+const char *pin = "1234";
+String device_name = "Robot_ESP32"; 
 
-void forward(uint8_t speed) {
+BluetoothSerial SerialBT;
 
-}
-
-
+void printDetail(uint8_t type, int value);
 void setup() {
-  pinMode(IN_L1, OUTPUT);
-  pinMode(IN_L2, OUTPUT);
-  pinMode(IN_L3, OUTPUT);
-  pinMode(IN_L4, OUTPUT);
+  Serial.begin(9600);
+  Serial.println("Serial 0 OK");
+  Serial1.begin(9600, SERIAL_8N1, 4, 5);
+  Serial.println("Serial 1 OK");
+  Serial2.begin(9600);
+  Serial.println("Serial 2 OK");
+  if (!player.begin(Serial1)) {
+    Serial.println("Unable to begin");
+    Serial.println("reconnect || insert SD card!");
+    while (true);
+  }
+  else Serial.println("Player ok");
+  player.setTimeOut(500);
+  player.volume(30);
+  player.EQ(DFPLAYER_EQ_NORMAL);
+  player.outputDevice(DFPLAYER_DEVICE_SD);
+  SerialBT.begin(device_name); //Bluetooth device name
+  Serial.printf("The device with name \"%s\" is started.\nNow you can pair it with Bluetooth!\n", device_name.c_str());
+  //Serial.printf("The device with name \"%s\" and MAC address %s is started.\nNow you can  pair it with Bluetooth!\n", device_name.c_str(), SerialBT.getMacString()); // Use this after the MAC method is implemented
+#ifdef USE_PIN
+  SerialBT.setPin(pin);
+  Serial.println("Using PIN");
+#endif
+  Serial.println("Setup suss"); 
 }
+
 
 void loop() {
 
-  analogWrite(IN_L1, 160);
-  analogWrite(IN_L2, 0);
-  analogWrite(IN_L3, 160);
-  analogWrite(IN_L4, 0);
-  delay(3000);
+//  if(Serial2.available()){
+//    String ser2 = Serial2.readStringUntil('\b');
+//    Serial.print("SERIAL 2 READ: ");
+//    Serial.println(ser2);
+//  }
 
-  analogWrite(IN_L1, 0);
-  analogWrite(IN_L2, 160);
-  analogWrite(IN_L3, 0);
-  analogWrite(IN_L4, 160);
-
-  delay(3000);
-
-  analogWrite(IN_L1, 160);
-  analogWrite(IN_L2, 0);
-  analogWrite(IN_L3, 0);
-  analogWrite(IN_L4, 160);
-  delay(3000);
-
-
-  //forward
-  //  analogWrite(IN_L1, 150);
-  //  digitalWrite(IN_L2, LOW);
-  //  analogWrite(IN_L3, 200);
-  //  digitalWrite(IN_L4, LOW);
-  //  delay(3000);
-
-  // stop
-  //  analogWrite(IN_L1, 0);
-  //  digitalWrite(IN_L2, LOW);
-  //  analogWrite(IN_L3, 0);
-  //  digitalWrite(IN_L4, LOW);
-  //  digitalWrite(IN_L1, LOW);
-  //  digitalWrite(IN_L2, LOW);
-  //  digitalWrite(IN_L3, LOW);
-  //  digitalWrite(IN_L4, LOW);
-  //  delay(3000);
-
-  // backword
-  //  analogWrite(IN_L2, 150);
-  //  digitalWrite(IN_L1, LOW);
-  //  analogWrite(IN_L4, 200);
-  //  digitalWrite(IN_L3, LOW);
-  //  delay(3000);
-
-  // stop
-  //  analogWrite(IN_L2, 0);
-  //  digitalWrite(IN_L1, LOW);
-  //  analogWrite(IN_L4, 0);
-  //  digitalWrite(IN_L3, LOW);
-  //  delay(3000);
+  if (SerialBT.available()) {
+    String serBT = SerialBT.readStringUntil('\b');
+    Serial.println(serBT);
+    Serial2.println(serBT);
+  }
+                              
+  delay(20);
+}
 
 
 
-
+void printDetail(uint8_t type, int value) {
+  switch (type)  {
+    case TimeOut:
+      Serial.println("Time Out");
+      break;
+    case WrongStack:
+      Serial.println("Stack Wrong");
+      break;
+    case DFPlayerCardInserted:
+      Serial.println("Card Inserted");
+      break;
+    case DFPlayerCardRemoved:
+      Serial.println("Card Removed");
+      break;
+    case DFPlayerCardOnline:
+      Serial.println("Card Online");
+      break;
+    case DFPlayerPlayFinished:
+      Serial.print("Number:");
+      Serial.print(value);
+      Serial.println(" Play Finished");
+      break;
+    case DFPlayerError:
+      Serial.print("DFPlayerError:");
+      switch (value)
+      {
+        case Busy:
+          Serial.println("Card not found");
+          break;
+        case Sleeping:
+          Serial.println("Sleeping");
+          break;
+        case SerialWrongStack:
+          Serial.println("Get Wrong Stack");
+          break;
+        case CheckSumNotMatch:
+          Serial.println("Check Sum Not Match");
+          break;
+        case FileIndexOut:
+          Serial.println("File Index Out");
+          break;
+        case FileMismatch:
+          Serial.println("Cannot Find File");
+          break;
+        case Advertise:
+          Serial.println("In Advertise");
+          break;
+        default:
+          break;
+      }
+      break;
+    default:
+      break;
+  }
 }
