@@ -162,7 +162,7 @@ void setup() {
   pinMode(IN_R3, OUTPUT);
   pinMode(IN_R4, OUTPUT);
 
-  Serial.begin(115200);
+  Serial.begin(9600);
   SerialBT.begin(device_name); //Bluetooth device name
   Serial.printf("The device with name \"%s\" is started.\nNow you can pair it with Bluetooth!\n", device_name.c_str());
   //Serial.printf("The device with name \"%s\" and MAC address %s is started.\nNow you can pair it with Bluetooth!\n", device_name.c_str(), SerialBT.getMacString()); // Use this after the MAC method is implemented
@@ -173,7 +173,6 @@ void setup() {
 
 
 }
-
 void loop() {
   if (SerialBT.available()) {
     val = SerialBT.readStringUntil('\b');
