@@ -1,12 +1,23 @@
 #include "BluetoothSerial.h"
 #include "DFRobotDFPlayerMini.h"
+#include "Adafruit_VL53L0X.h"
+#include <MPU6050_tockn.h>
+#include <Wire.h>
 #include "config.h"
 
-
 String data_Uart_Rec = "", serBT = "", data_Uart_Rec_Pre = "";
+float tempX = 0;
+int dis1 = 0, dis2 = 0, dis3 = 0;
 
 BluetoothSerial SerialBT;
 DFRobotDFPlayerMini player;
+Adafruit_VL53L0X lox1 = Adafruit_VL53L0X();
+Adafruit_VL53L0X lox2 = Adafruit_VL53L0X();
+Adafruit_VL53L0X lox3 = Adafruit_VL53L0X();
+MPU6050 mpu6050(Wire);
+VL53L0X_RangingMeasurementData_t measure1;
+VL53L0X_RangingMeasurementData_t measure2;
+VL53L0X_RangingMeasurementData_t measure3;
 
 static void taskControlHand(void *par);
 void setup() {
@@ -18,6 +29,26 @@ void setup() {
   pinMode(IN_R2, OUTPUT);
   pinMode(IN_R3, OUTPUT);
   pinMode(IN_R4, OUTPUT);
+
+  pinMode(SHT_LOX1, OUTPUT);
+  pinMode(SHT_LOX2, OUTPUT);
+  pinMode(SHT_LOX3, OUTPUT);
+  Serial.println(F("Shutdown pins inited..."));
+  digitalWrite(SHT_LOX1, LOW);
+  digitalWrite(SHT_LOX2, LOW);
+  digitalWrite(SHT_LOX3, LOW);
+  Serial.println(F("Both in reset mode...(pins are low)"));
+  Serial.println(F("Starting..."));
+
+  Wire.begin();
+  mpu6050.begin();
+  mpu6050.calcGyroOffsets(true);
+  setIDSensor();
+
+  lox1.rangingTest(&measure1, false); // pass in 'true' to get debug data printout!
+  lox2.rangingTest(&measure2, false); // pass in 'true' to get debug data printout!
+  lox3.rangingTest(&measure3, false); // pass in 'true' to get debug data printout!
+  tempX = mpu6050.getAngleX();
 
   Serial.begin(9600);
   Serial.println("Serial0 OK");
@@ -52,41 +83,62 @@ void setup() {
 }
 
 void loop() {
-
+  uint8_t spl1 = 180, spl2 = 180, spl3 = 180, spl4 = 180;
   if (Serial2.available() > 0) {
     data_Uart_Rec = Serial2.readStringUntil('\b');
     //    Serial.print("Rec: ");
     //    Serial.println(data_Uart_Rec);
-  } else data_Uart_Rec = "";
+  }
 
-  //  Serial.print("BLT: "); Serial.println(serBT);
-  //  Serial.print("\tSr2: "); Serial.println(data_Uart_Rec);
+  Serial.println(data_Uart_Rec);
 
+  if (measure1.RangeStatus != 4) {    // if not out of range
+    //    Serial.print(measure1.RangeMilliMeter);
+    dis1 = measure1.RangeMilliMeter;
+  }
+  else dis1 = 10000;
 
-  //  if (serBT == "F" || data_Uart_Rec == "F")
-  //    moveForward(sp1, sp2, sp3, sp4);
-  //  else if (serBT == "B")
-  //    moveBackward(sp1, sp2, sp3, sp4);
-  //  else if (serBT == "L" || data_Uart_Rec == "L")
-  //    moveLeft(sp1, sp2, sp3, sp4);
-  //  else if (serBT == "R" || data_Uart_Rec == "R")
-  //    moveRight(sp1, sp2, sp3, sp4);
-  //  else if (serBT == "G" || data_Uart_Rec == "FL")
-  //    moveForwardLeft(sp1, sp2, sp3, sp4);
-  //  else if (serBT == "I" || data_Uart_Rec == "FR")
-  //    moveForwardRight(sp1, sp2, sp3, sp4);
-  //  else if (serBT == "H")
-  //    moveBackwardLeft(sp1, sp2, sp3, sp4);
-  //  else if (serBT == "J")
-  //    moveBackwardRight(sp1, sp2, sp3, sp4);
-  //  else if (serBT == "S" || data_Uart_Rec == "ST" || data_Uart_Rec == "NT")
+  if (measure2.RangeStatus != 4) {
+    dis2 = measure2.RangeMilliMeter;
+    //    Serial.print(measure2.RangeMilliMeter);
+  }
+  else dis2 = 10000;
+
+  if (measure3.RangeStatus != 4) {
+    dis3 = measure3.RangeMilliMeter;
+    //    Serial.print(measure3.RangeMilliMeter);
+  }
+  else dis3 = 10000;
+
+  mpu6050.update();
+//  Serial.print("\tangleX : ");
+//  Serial.print(mpu6050.getAngleX());
+//  Serial.print("\tangleY : ");
+//  Serial.print(mpu6050.getAngleY());
+//  Serial.print("\tangleZ : ");
+//  Serial.println(mpu6050.getAngleZ());
+//  Serial.println(tempX);
+
+  if (mpu6050.getAngleX() > (tempX + 4) || mpu6050.getAngleX() < (tempX - 4)) {
+    Serial.println("=============================================================================");
+  }
+
+  //  if (data_Uart_Rec == "F")
+  //    moveForward(spl1, spl2, spl3, spl4);
+  //  else if (data_Uart_Rec == "L")
+  //    moveLeft(spl1, spl2, spl3, spl4);
+  //  else if (data_Uart_Rec == "R")
+  //    moveRight(spl1, spl2, spl3, spl4);
+  //  else if (data_Uart_Rec == "FL")
+  //    moveForwardLeft(spl1, spl2, spl3, spl4);
+  //  else if (data_Uart_Rec == "FR")
+  //    moveForwardRight(spl1, spl2, spl3, spl4);
+  //  else if (data_Uart_Rec == "ST" || data_Uart_Rec == "NT")
   //    stop();
   //
   //  if (data_Uart_Rec == "NT" && (data_Uart_Rec != data_Uart_Rec_Pre)) {
-  //
   //    player.play(7);
   //    data_Uart_Rec_Pre = data_Uart_Rec;
-  //
   //  }
 }
 
@@ -131,7 +183,7 @@ void taskControlHand(void *par) {
       v1 = getValue(task_BLT, ',', 0);
       v2 = getValue(task_BLT, ',', 1);
       v3 = getValue(task_BLT, ',', 2);
-      v4 = getValue(task_BLT, ',', 3);
+      v4 = getValue(task_BLT , ',', 3);
       sp1 = v1.toInt();
       sp2 = v2.toInt();
       sp3 = v3.toInt();
@@ -142,21 +194,16 @@ void taskControlHand(void *par) {
       Serial.print("Speed3: "); Serial.println(sp3);
       Serial.print("Speed4: "); Serial.println(sp4);
     }
-    //    else {
-    //      sp1 = 180;
-    //      sp2 = 180;
-    //      sp3 = 180;
-    //      sp4 = 180;
-    //    }
-
     if (task_BLT == "F")
       moveForward(sp1, sp2, sp3, sp4);
     else if (task_BLT == "B")
       moveBackward(sp1, sp2, sp3, sp4);
     else if (task_BLT == "L")
-      moveLeft(sp1, sp2, sp3, sp4);
+      //      moveLeft(sp1, sp2, sp3, sp4);
+      turnLeft(sp1, sp2, sp3, sp4);
     else if (task_BLT == "R")
-      moveRight(sp1, sp2, sp3, sp4);
+      //      moveRight(sp1, sp2, sp3, sp4);
+      turnRight(sp1, sp2, sp3, sp4);
     else if (task_BLT == "G")
       moveForwardLeft(sp1, sp2, sp3, sp4);
     else if (task_BLT == "I")
@@ -167,13 +214,6 @@ void taskControlHand(void *par) {
       moveBackwardRight(sp1, sp2, sp3, sp4);
     else if (task_BLT == "S")
       stop();
-
-    //    if (data_Uart_Rec == "NT" && (data_Uart_Rec != data_Uart_Rec_Pre)) {
-    //
-    //      player.play(7);
-    //      data_Uart_Rec_Pre = data_Uart_Rec;
-    //
-    //    }
   }
 }
 
@@ -322,4 +362,38 @@ String getValue(String data, char separator, int index) {
   return found > index ? data.substring(strIndex[0], strIndex[1]) : "";
 }
 
-//String sensorToF();
+void setIDSensor() {
+  digitalWrite(SHT_LOX1, LOW);
+  digitalWrite(SHT_LOX2, LOW);
+  digitalWrite(SHT_LOX3, LOW);
+  delay(10);
+  digitalWrite(SHT_LOX1, HIGH);
+  digitalWrite(SHT_LOX2, HIGH);
+  digitalWrite(SHT_LOX3, HIGH);
+  delay(10);
+  digitalWrite(SHT_LOX1, HIGH);
+  digitalWrite(SHT_LOX2, LOW);
+  digitalWrite(SHT_LOX3, LOW);
+
+  if (!lox1.begin(LOX1_ADDRESS)) {
+    Serial.println(F("Failed to boot first VL53L0X"));
+    while (1);
+  }
+  delay(10);
+
+  digitalWrite(SHT_LOX2, HIGH);
+  digitalWrite(SHT_LOX3, LOW);
+  delay(10);
+
+  if (!lox2.begin(LOX2_ADDRESS)) {
+    Serial.println(F("Failed to boot second VL53L0X"));
+    while (1);
+  }
+
+  digitalWrite(SHT_LOX3, HIGH);
+  if (!lox3.begin(LOX3_ADDRESS)) {
+    Serial.println(F("Failed to boot second VL53L0X"));
+    while (1);
+  }
+  Serial.println("init VL53LX success");
+}

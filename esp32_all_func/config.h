@@ -9,6 +9,12 @@ String device_name = "Robot_ESP32";
 #define IN_R2 19
 #define IN_R3 18
 #define IN_R4 26
+#define LOX1_ADDRESS 0x30
+#define LOX2_ADDRESS 0x31
+#define LOX3_ADDRESS 0x32
+#define SHT_LOX1 14
+#define SHT_LOX2 15
+#define SHT_LOX3 13
 
 
 void moveForward(uint8_t speed1, uint8_t speed2, uint8_t speed3, uint8_t speed4) ;
@@ -23,4 +29,4 @@ void turnLeft(uint8_t speed1, uint8_t speed2, uint8_t speed3, uint8_t speed4);
 void turnRight(uint8_t speed1, uint8_t speed2, uint8_t speed3, uint8_t speed4);
 void stop();
 String getValue(String data, char separator, int index);
-String sensorToF();
+void setIDSensor();

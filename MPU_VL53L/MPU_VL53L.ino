@@ -19,6 +19,8 @@ VL53L0X_RangingMeasurementData_t measure1;
 VL53L0X_RangingMeasurementData_t measure2;
 VL53L0X_RangingMeasurementData_t measure3;
 
+
+float tempX = 0;
 /*
     Reset all sensors by setting all of their XSHUT pins low for delay(10), then set all XSHUT high to bring out of reset
     Keep sensor #1 awake by keeping XSHUT pin high
@@ -39,7 +41,6 @@ void setID() {
   digitalWrite(SHT_LOX1, HIGH);
   digitalWrite(SHT_LOX2, LOW);
   digitalWrite(SHT_LOX3, LOW);
-
 
   if (!lox1.begin(LOX1_ADDRESS)) {
     Serial.println(F("Failed to boot first VL53L0X"));
@@ -95,9 +96,9 @@ void read_dual_sensors() {
 }
 
 void read_data_sensors() {
-  lox1.rangingTest(&measure1, false); // pass in 'true' to get debug data printout!
-  lox2.rangingTest(&measure2, false); // pass in 'true' to get debug data printout!
-  lox3.rangingTest(&measure3, false); // pass in 'true' to get debug data printout!
+  //  lox1.rangingTest(&measure1, false); // pass in 'true' to get debug data printout!
+  //  lox2.rangingTest(&measure2, false); // pass in 'true' to get debug data printout!
+  //  lox3.rangingTest(&measure3, false); // pass in 'true' to get debug data printout!
 
   Serial.print(F("1: "));
   if (measure1.RangeStatus != 4) {    // if not out of range
@@ -124,7 +125,6 @@ void read_data_sensors() {
   else {
     Serial.print(F("Out of range"));
   }
-
   mpu6050.update();
   Serial.print("\tangleX : ");
   Serial.print(mpu6050.getAngleX());
@@ -132,7 +132,6 @@ void read_data_sensors() {
   Serial.print(mpu6050.getAngleY());
   Serial.print("\tangleZ : ");
   Serial.println(mpu6050.getAngleZ());
-
 }
 
 void setup() {
@@ -152,10 +151,52 @@ void setup() {
   mpu6050.begin();
   mpu6050.calcGyroOffsets(true);
   setID();
+  lox1.rangingTest(&measure1, false); // pass in 'true' to get debug data printout!
+  lox2.rangingTest(&measure2, false); // pass in 'true' to get debug data printout!
+  lox3.rangingTest(&measure3, false); // pass in 'true' to get debug data printout!
+  tempX = mpu6050.getAngleX();
 }
 
 void loop() {
   //  read_dual_sensors();
-  read_data_sensors();
+  //  read_data_sensors();
+  Serial.print(F("1: "));
+  if (measure1.RangeStatus != 4) {    // if not out of range
+    Serial.print(measure1.RangeMilliMeter);
+  }
+  else {
+    Serial.print(F("Out of range"));
+  }
+
+  Serial.print(F(" "));
+  Serial.print(F("2: "));
+  if (measure2.RangeStatus != 4) {
+    Serial.print(measure2.RangeMilliMeter);
+  }
+  else {
+    Serial.print(F("Out of range"));
+  }
+
+  Serial.print(F(" "));
+  Serial.print(F("3: "));
+  if (measure3.RangeStatus != 4) {
+    Serial.print(measure3.RangeMilliMeter);
+  }
+  else {
+    Serial.print(F("Out of range"));
+  }
+  mpu6050.update();
+//  Serial.print("\tangleX : ");
+//  Serial.print(mpu6050.getAngleX());
+//  Serial.print("\tangleY : ");
+//  Serial.print(mpu6050.getAngleY());
+//  Serial.print("\tangleZ : ");
+//  Serial.println(mpu6050.getAngleZ());
+//  Serial.println(tempX);
+
+  if (mpu6050.getAngleX() > (tempX + 4) || mpu6050.getAngleX() < (tempX - 4)) {
+    Serial.println("=============================================================================");
+  }
+
   delay(100);
 }
