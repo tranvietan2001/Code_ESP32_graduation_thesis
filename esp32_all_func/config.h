@@ -30,3 +30,4 @@ void turnRight(uint8_t speed1, uint8_t speed2, uint8_t speed3, uint8_t speed4);
 void stop();
 String getValue(String data, char separator, int index);
 void setIDSensor();
+void printDetail(uint8_t type, int value);

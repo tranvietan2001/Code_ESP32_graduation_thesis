@@ -8,6 +8,9 @@
 String data_Uart_Rec = "", serBT = "", data_Uart_Rec_Pre = "";
 float tempX = 0;
 int dis1 = 0, dis2 = 0, dis3 = 0;
+uint8_t disStatus = 0;
+int threshold = 500;
+uint8_t countErr = 0;
 
 BluetoothSerial SerialBT;
 DFRobotDFPlayerMini player;
@@ -75,8 +78,8 @@ void setup() {
   player.volume(30);
   player.EQ(DFPLAYER_EQ_NORMAL);
   player.outputDevice(DFPLAYER_DEVICE_SD);
-
   player.play(2);
+  delay(20000);
   Serial.println("Setup SUSS");
 
   xTaskCreatePinnedToCore(taskControlHand, "taskControlHand", 1024 * 4, NULL, 1, NULL, 0);
@@ -86,12 +89,8 @@ void loop() {
   uint8_t spl1 = 180, spl2 = 180, spl3 = 180, spl4 = 180;
   if (Serial2.available() > 0) {
     data_Uart_Rec = Serial2.readStringUntil('\b');
-    //    Serial.print("Rec: ");
-    //    Serial.println(data_Uart_Rec);
   }
-
   Serial.println(data_Uart_Rec);
-
   if (measure1.RangeStatus != 4) {    // if not out of range
     //    Serial.print(measure1.RangeMilliMeter);
     dis1 = measure1.RangeMilliMeter;
@@ -103,7 +102,6 @@ void loop() {
     //    Serial.print(measure2.RangeMilliMeter);
   }
   else dis2 = 10000;
-
   if (measure3.RangeStatus != 4) {
     dis3 = measure3.RangeMilliMeter;
     //    Serial.print(measure3.RangeMilliMeter);
@@ -111,35 +109,45 @@ void loop() {
   else dis3 = 10000;
 
   mpu6050.update();
-//  Serial.print("\tangleX : ");
-//  Serial.print(mpu6050.getAngleX());
-//  Serial.print("\tangleY : ");
-//  Serial.print(mpu6050.getAngleY());
-//  Serial.print("\tangleZ : ");
-//  Serial.println(mpu6050.getAngleZ());
-//  Serial.println(tempX);
-
-  if (mpu6050.getAngleX() > (tempX + 4) || mpu6050.getAngleX() < (tempX - 4)) {
-    Serial.println("=============================================================================");
+  if (mpu6050.getAngleX() > (tempX + 7) || mpu6050.getAngleX() < (tempX - 7)) {
+    countErr ++;
+    if (countErr >= 5) {
+      if (player.available()) {
+        if (player.readType() == DFPlayerPlayFinished) {
+          player.play(8);
+        }
+      }
+      countErr = 0;
+    }
   }
 
-  //  if (data_Uart_Rec == "F")
-  //    moveForward(spl1, spl2, spl3, spl4);
-  //  else if (data_Uart_Rec == "L")
-  //    moveLeft(spl1, spl2, spl3, spl4);
-  //  else if (data_Uart_Rec == "R")
-  //    moveRight(spl1, spl2, spl3, spl4);
-  //  else if (data_Uart_Rec == "FL")
-  //    moveForwardLeft(spl1, spl2, spl3, spl4);
-  //  else if (data_Uart_Rec == "FR")
-  //    moveForwardRight(spl1, spl2, spl3, spl4);
-  //  else if (data_Uart_Rec == "ST" || data_Uart_Rec == "NT")
-  //    stop();
-  //
-  //  if (data_Uart_Rec == "NT" && (data_Uart_Rec != data_Uart_Rec_Pre)) {
-  //    player.play(7);
-  //    data_Uart_Rec_Pre = data_Uart_Rec;
-  //  }
+  if (data_Uart_Rec == "F" && dis2 > threshold )
+    moveForward(spl1, spl2, spl3, spl4);
+  else if (data_Uart_Rec == "F" && dis2 <= threshold ) {
+    if (dis1 <= threshold && dis3 <= threshold)
+      stop();
+    //warning sound
+    else if (dis1 > threshold && dis3 <= threshold)
+      //      moveRight(spl1, spl2, spl3, spl4);
+      moveFarwardRight(spl1, spl2, spl3, spl4);
+    else if (dis1 <= threshold && dis3 > threshold)
+      moveFarwardLeft(spl1, spl2, spl3, spl4);
+  }
+  else if (data_Uart_Rec == "L")
+    moveLeft(spl1, spl2, spl3, spl4);
+  else if (data_Uart_Rec == "R")
+    moveRight(spl1, spl2, spl3, spl4);
+  else if (data_Uart_Rec == "FL")
+    moveForwardLeft(spl1, spl2, spl3, spl4);
+  else if (data_Uart_Rec == "FR")
+    moveForwardRight(spl1, spl2, spl3, spl4);
+  else if (data_Uart_Rec == "ST" || data_Uart_Rec == "NT")
+    stop();
+
+  if (data_Uart_Rec == "NT" && (data_Uart_Rec != data_Uart_Rec_Pre)) {
+    player.play(7);
+    data_Uart_Rec_Pre = data_Uart_Rec;
+  }
 }
 
 void taskControlHand(void *par) {
@@ -189,10 +197,10 @@ void taskControlHand(void *par) {
       sp3 = v3.toInt();
       sp4 = v4.toInt();
 
-      Serial.print("Speed1: "); Serial.println(sp1);
-      Serial.print("Speed2: "); Serial.println(sp2);
-      Serial.print("Speed3: "); Serial.println(sp3);
-      Serial.print("Speed4: "); Serial.println(sp4);
+      //      Serial.print("Speed1: "); Serial.println(sp1);
+      //      Serial.print("Speed2: "); Serial.println(sp2);
+      //      Serial.print("Speed3: "); Serial.println(sp3);
+      //      Serial.print("Speed4: "); Serial.println(sp4);
     }
     if (task_BLT == "F")
       moveForward(sp1, sp2, sp3, sp4);
@@ -216,8 +224,6 @@ void taskControlHand(void *par) {
       stop();
   }
 }
-
-
 void moveForward(uint8_t speed1, uint8_t speed2, uint8_t speed3, uint8_t speed4) {
   analogWrite(IN_L1, speed1);
   analogWrite(IN_L2, 0);
@@ -241,6 +247,14 @@ void moveBackward(uint8_t speed1, uint8_t speed2, uint8_t speed3, uint8_t speed4
   delay(10);
 }
 void moveLeft(uint8_t speed1, uint8_t speed2, uint8_t speed3, uint8_t speed4) {
+  speed1 = speed1 + 60;
+  speed2 = speed2 + 60;
+  speed3 = speed3 + 60;
+  speed4 = speed4 + 60;
+  if (speed1 >= 255) speed1 = 255;
+  if (speed2 >= 255) speed2 = 255;
+  if (speed3 >= 255) speed3 = 255;
+  if (speed4 >= 255) speed5 = 255;
   analogWrite(IN_L1, 0);
   analogWrite(IN_L2, speed1);
   analogWrite(IN_L3, speed2);
@@ -253,6 +267,14 @@ void moveLeft(uint8_t speed1, uint8_t speed2, uint8_t speed3, uint8_t speed4) {
 }
 
 void moveRight(uint8_t speed1, uint8_t speed2, uint8_t speed3, uint8_t speed4) {
+  speed1 = speed1 + 60;
+  speed2 = speed2 + 60;
+  speed3 = speed3 + 60;
+  speed4 = speed4 + 60;
+  if (speed1 >= 255) speed1 = 255;
+  if (speed2 >= 255) speed2 = 255;
+  if (speed3 >= 255) speed3 = 255;
+  if (speed4 >= 255) speed5 = 255;
   analogWrite(IN_L1, speed1);
   analogWrite(IN_L2, 0);
   analogWrite(IN_L3, 0);
@@ -265,6 +287,10 @@ void moveRight(uint8_t speed1, uint8_t speed2, uint8_t speed3, uint8_t speed4) {
 }
 
 void moveForwardLeft(uint8_t speed1, uint8_t speed2, uint8_t speed3, uint8_t speed4) {
+  speed2 = speed2 + 60;
+  speed3 = speed3 + 60;
+  if (speed2 >= 255) speed2 = 255;
+  if (speed3 >= 255) speed3 = 255;
   analogWrite(IN_L1, 0);
   analogWrite(IN_L2, 0);
   analogWrite(IN_L3, speed2);
@@ -277,6 +303,10 @@ void moveForwardLeft(uint8_t speed1, uint8_t speed2, uint8_t speed3, uint8_t spe
 }
 
 void moveForwardRight(uint8_t speed1, uint8_t speed2, uint8_t speed3, uint8_t speed4) {
+  speed1 = speed1 + 60;
+  speed4 = speed4 + 60;
+  if (speed1 >= 255) speed1 = 255;
+  if (speed4 >= 255) speed5 = 255;
   analogWrite(IN_L1, speed1);
   analogWrite(IN_L2, 0);
   analogWrite(IN_L3, 0);
@@ -289,6 +319,10 @@ void moveForwardRight(uint8_t speed1, uint8_t speed2, uint8_t speed3, uint8_t sp
 }
 
 void moveBackwardLeft(uint8_t speed1, uint8_t speed2, uint8_t speed3, uint8_t speed4) {
+  speed1 = speed1 + 60;
+  speed4 = speed4 + 60;
+  if (speed1 >= 255) speed1 = 255;
+  if (speed4 >= 255) speed5 = 255;
   analogWrite(IN_L1, 0);
   analogWrite(IN_L2, speed1);
   analogWrite(IN_L3, 0);
@@ -301,6 +335,10 @@ void moveBackwardLeft(uint8_t speed1, uint8_t speed2, uint8_t speed3, uint8_t sp
 }
 
 void moveBackwardRight(uint8_t speed1, uint8_t speed2, uint8_t speed3, uint8_t speed4) {
+  speed2 = speed2 + 60;
+  speed3 = speed3 + 60;
+  if (speed2 >= 255) speed2 = 255;
+  if (speed3 >= 255) speed3 = 255;
   analogWrite(IN_L1, 0);
   analogWrite(IN_L2, 0);
   analogWrite(IN_L3, 0);
@@ -396,4 +434,66 @@ void setIDSensor() {
     while (1);
   }
   Serial.println("init VL53LX success");
+}
+
+
+void printDetail(uint8_t type, int value) {
+  switch (type) {
+    case TimeOut:
+      Serial.println(F("Time Out!"));
+      break;
+    case WrongStack:
+      Serial.println(F("Stack Wrong!"));
+      break;
+    case DFPlayerCardInserted:
+      Serial.println(F("Card Inserted!"));
+      break;
+    case DFPlayerCardRemoved:
+      Serial.println(F("Card Removed!"));
+      break;
+    case DFPlayerCardOnline:
+      Serial.println(F("Card Online!"));
+      break;
+    case DFPlayerUSBInserted:
+      Serial.println("USB Inserted!");
+      break;
+    case DFPlayerUSBRemoved:
+      Serial.println("USB Removed!");
+      break;
+    case DFPlayerPlayFinished:
+      Serial.print(F("Number:"));
+      Serial.print(value);
+      Serial.println(F(" Play Finished!"));
+      break;
+    case DFPlayerError:
+      Serial.print(F("DFPlayerError:"));
+      switch (value) {
+        case Busy:
+          Serial.println(F("Card not found"));
+          break;
+        case Sleeping:
+          Serial.println(F("Sleeping"));
+          break;
+        case SerialWrongStack:
+          Serial.println(F("Get Wrong Stack"));
+          break;
+        case CheckSumNotMatch:
+          Serial.println(F("Check Sum Not Match"));
+          break;
+        case FileIndexOut:
+          Serial.println(F("File Index Out of Bound"));
+          break;
+        case FileMismatch:
+          Serial.println(F("Cannot Find File"));
+          break;
+        case Advertise:
+          Serial.println(F("In Advertise"));
+          break;
+        default:
+          break;
+      }
+      break;
+    default:
+      break;
+  }
 }
